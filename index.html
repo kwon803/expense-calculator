@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>실 지출 비용 계산기 (반응형 & 애플 스타일)</title>
+  <style>
+    /* 애플 스타일 컬러 팔레트 참조 */
+    :root {
+      --bg-color: #f5f5f5;
+      --card-bg: #ffffff;
+      --primary: #007aff;
+      --text-primary: #1c1c1e;
+      --text-secondary: #6e6e73;
+      --border: #d1d1d6;
+      --hover-bg: rgba(0, 122, 255, 0.1);
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-primary);
+      padding: 20px;
+    }
+    h1, h2 {
+      margin-bottom: 16px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .calculator, .history {
+      background: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      padding: 24px;
+      flex: 1;
+    }
+    .calculator {
+      min-width: 320px;
+    }
+    .history {
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 1rem;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background-color: #fafafa;
+      color: var(--text-primary);
+      transition: border-color 0.2s, background-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus {
+      border-color: var(--primary);
+      background-color: #ffffff;
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+    }
+    .button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--primary);
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    .button:hover {
+      background-color: #005bb5;
+    }
+    .result {
+      margin-top: 24px;
+      padding: 16px;
+      background-color: #f0f0f5;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 500;
+      white-space: pre-line;
+      text-align: center;
+      color: var(--text-primary);
+    }
+    .note {
+      margin-top: 4px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+    table th,
+    table td {
+      border: 1px solid var(--border);
+      padding: 12px 8px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    table th {
+      background-color: #f9f9fb;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+    .table-wrapper {
+      overflow-x: auto;
+    }
+    /* 반응형: 화면 너비가 768px 이하일 때 */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      .history {
+        max-height: 300px;
+        margin-top: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 계산기 섹션 -->
+    <div class="calculator">
+      <h1>실 지출 비용 계산기</h1>
+
+      <!-- 1. 날짜 선택 -->
+      <div class="form-group">
+        <label for="date">날짜 선택 <span style="color:var(--primary);">*</span></label>
+        <input type="date" id="date" />
+      </div>
+
+      <!-- 2. 채널 선택 -->
+      <div class="form-group">
+        <label for="channel">채널 선택 (옵션)</label>
+        <select id="channel" onchange="applyPreset()">
+          <option value="">⬇️ 프리셋이 있는 채널을 선택하세요</option>
+          <option value="파워링크" data-fee="14.5" data-vat="0">파워링크 (수수료 14.5%, VAT 0%)</option>
+          <option value="쇼핑검색" data-fee="14.5" data-vat="0">쇼핑검색 (수수료 14.5%, VAT 0%)</option>
+          <option value="파워컨텐츠" data-fee="0.0" data-vat="0">파워컨텐츠 (수수료 0%, VAT 0%)</option>
+          <option value="브랜드검색" data-fee="14.5" data-vat="0">브랜드검색 (수수료 14.5%, VAT 0%)</option>
+          <option value="신제품검색" data-fee="14.5" data-vat="0">신제품검색 (수수료 14.5%, VAT 0%)</option>
+          <option value="네이버GFA" data-fee="15.0" data-vat="0">네이버GFA (수수료 15%, VAT 0%)</option>
+          <option value="카카오키워드광고" data-fee="14.5" data-vat="0">카카오키워드광고 (수수료 14.5%, VAT 0%)</option>
+          <option value="카카오모먼트" data-fee="14.0" data-vat="10">카카오모먼트 (수수료 14%, VAT 10%)</option>
+          <option value="카카오빅카드" data-fee="13.0" data-vat="0">카카오빅카드 (수수료 13%, VAT 0%)</option>
+          <option value="페이스북" data-fee="0.0" data-vat="0">페이스북 (수수료 0%, VAT 0%)</option>
+          <option value="구글" data-fee="0.0" data-vat="10">구글 (수수료 0%, VAT 10%)</option>
+          <option value="토스애즈" data-fee="15.0" data-vat="10">토스애즈 (수수료 15%, VAT 10%)</option>
+          <option value="네이버쇼핑블록" data-fee="12.0" data-vat="0">네이버쇼핑블록 (수수료 12%, VAT 0%)</option>
+          <option value="네이트" data-fee="13.0" data-vat="10">네이트 (수수료 13%, VAT 10%)</option>
+          <option value="11번가" data-fee="0.0" data-vat="0">11번가 (수수료 0%, VAT 0%)</option>
+          <option value="G마켓/옥션" data-fee="0.0" data-vat="0">G마켓/옥션 (수수료 0%, VAT 0%)</option>
+          <option value="쿠팡" data-fee="0.0" data-vat="0">쿠팡 (수수료 0%, VAT 0%)</option>
+          <option value="오늘의집" data-fee="0.0" data-vat="0">오늘의집 (수수료 0%, VAT 0%)</option>
+          <option value="토스쇼핑" data-fee="0.0" data-vat="0">토스쇼핑 (수수료 0%, VAT 0%)</option>
+        </select>
+      </div>
+
+      <!-- 3. 매체 비용 입력 -->
+      <div class="form-group">
+        <label for="mediaCost">실제 매체 비용 <span style="color:var(--primary);">*</span> (원)</label>
+        <input type="number" id="mediaCost" placeholder="예: 100000" />
+        <div class="note">👉 소수점 없이 정수 입력</div>
+      </div>
+
+      <!-- 4. 수수료율 입력 -->
+      <div class="form-group">
+        <label for="feeRate">대행 수수료율 <span style="color:var(--primary);">*</span> (%)</label>
+        <input type="number" id="feeRate" placeholder="예: 14.5" step="0.1" />
+        <div class="note">프리셋 선택 시 자동 입력</div>
+      </div>
+
+      <!-- 5. VAT율 입력 -->
+      <div class="form-group">
+        <label for="vatRate">부가세율 <span style="color:var(--primary);">*</span> (%)</label>
+        <input type="number" id="vatRate" placeholder="예: 10" step="0.1" />
+        <div class="note">프리셋 선택 시 자동 입력</div>
+      </div>
+
+      <!-- 6. 계산 버튼 -->
+      <button class="button" onclick="calculate()">실 지출 비용 계산</button>
+
+      <!-- 7. 계산 결과 -->
+      <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- 히스토리 섹션 -->
+    <div class="history">
+      <h2>계산 히스토리</h2>
+      <div class="table-wrapper">
+        <table id="historyTable">
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>채널</th>
+              <th>매체 비용</th>
+              <th>수수료율</th>
+              <th>부가세율</th>
+              <th>실 지출 비용</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- 히스토리 항목이 여기에 추가됩니다 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const historyData = [];
+    function applyPreset() {
+      const option = document.getElementById('channel').options[document.getElementById('channel').selectedIndex];
+      const fee = option.getAttribute('data-fee');
+      const vat = option.getAttribute('data-vat');
+      if (fee && vat) {
+        document.getElementById('feeRate').value = fee;
+        document.getElementById('vatRate').value = vat;
+      }
+    }
+    function calculate() {
+      const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
+      const channel = document.getElementById('channel').value || '-';
+      const mediaCost = parseInt(document.getElementById('mediaCost').value, 10);
+      const feeRateVal = document.getElementById('feeRate').value;
+      const vatRateVal = document.getElementById('vatRate').value;
+      if (isNaN(mediaCost) || mediaCost < 0 || isNaN(parseFloat(feeRateVal)) || isNaN(parseFloat(vatRateVal))) { alert('올바른 숫자를 입력해 주세요.'); return; }
+      const feeRate = parseFloat(feeRateVal) / 100;
+      const vatRate = parseFloat(vatRateVal) / 100;
+      const agencyFee = Math.round(mediaCost * feeRate);
+      const vatAmount = Math.round(agencyFee * vatRate);
+      const totalDeduction = agencyFee + vatAmount;
+      const actualCost = mediaCost - totalDeduction;
+      const resultEl = document.getElementById('result');
+      resultEl.style.display = 'block';
+      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n총 공제 금액: ${totalDeduction.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
+      historyData.push({ date, channel, mediaCost, feeRateText: (feeRate * 100).toFixed(1) + '%', vatRateText: (vatRate * 100).toFixed(1) + '%', actualCost });
+      renderHistory();
+    }
+    function renderHistory() {
+      const tbody = document.querySelector('#historyTable tbody');
+      tbody.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+      historyData.forEach(item => {
+        const tr = document.createElement('tr');
+        ['date', 'channel', 'mediaCost', 'feeRateText', 'vatRateText', 'actualCost'].forEach(key => {
+          const td = document.createElement('td');
+          let text = item[key];
+          if (key === 'mediaCost' || key === 'actualCost') text = text.toLocaleString() + '원';
+          td.textContent = text;
+          tr.appendChild(td);
+        });
+        fragment.appendChild(tr);
+      });
+      tbody.appendChild(fragment);
+    }
+  </script>
+</body>
+</html>
