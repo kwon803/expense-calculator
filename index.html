@@ -256,12 +256,20 @@
       const feeRate = parseFloat(feeRateVal) / 100;
       const vatRate = parseFloat(vatRateVal) / 100;
       const agencyFee = Math.round(mediaCost * feeRate);
-      const vatAmount = Math.round(agencyFee * vatRate);
-      const totalDeduction = agencyFee + vatAmount;
-      const actualCost = mediaCost - totalDeduction;
+      let vatAmount;
+      let actualCost;
+      if (agencyFee === 0 && vatRate > 0) {
+        // 수수료가 0인 경우 매체 비용에 VAT 적용
+        vatAmount = Math.round(mediaCost * vatRate);
+        actualCost = mediaCost + vatAmount;
+      } else {
+        vatAmount = Math.round(agencyFee * vatRate);
+        const totalDeduction = agencyFee + vatAmount;
+        actualCost = mediaCost - totalDeduction;
+      }
       const resultEl = document.getElementById('result');
       resultEl.style.display = 'block';
-      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n총 공제 금액: ${totalDeduction.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
+      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
       historyData.push({ date, channel, mediaCost, feeRateText: (feeRate * 100).toFixed(1) + '%', vatRateText: (vatRate * 100).toFixed(1) + '%', actualCost });
       renderHistory();
     }
@@ -274,7 +282,8 @@
         ['date', 'channel', 'mediaCost', 'feeRateText', 'vatRateText', 'actualCost'].forEach(key => {
           const td = document.createElement('td');
           let text = item[key];
-          if (key === 'mediaCost' || key === 'actualCost') text = text.toLocaleString() + '원';
+          if (key === 'mediaCost') text = text.toLocaleString() + '원';
+          if (key === 'actualCost') text = text.toLocaleString() + '원';
           td.textContent = text;
           tr.appendChild(td);
         });
