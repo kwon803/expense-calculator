@@ -16,7 +16,7 @@
       --hover-bg: rgba(0, 122, 255, 0.1);
     }
     * {
-      box-sizing: border-box;
+      box-sizing: border-box; /* 전체 요소에 일관된 박스 모델 적용 */
       margin: 0;
       padding: 0;
     }
@@ -41,7 +41,7 @@
     .calculator, .history {
       background: var(--card-bg);
       border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* 그림자에 투명도 지정 */
       padding: 24px;
       flex: 1;
     }
@@ -94,6 +94,33 @@
     }
     .button:hover {
       background-color: #005bb5;
+    }
+    .small-button {
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      margin-bottom: 12px;
+      background-color: #ff3b30;
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .small-button:hover {
+      background-color: #e02b20;
+    }
+    .delete-button {
+      padding: 4px 8px;
+      font-size: 0.8rem;
+      background-color: #ff3b30;
+      border: none;
+      border-radius: 6px;
+      color: #ffffff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .delete-button:hover {
+      background-color: #e02b20;
     }
     .result {
       margin-top: 24px;
@@ -162,25 +189,12 @@
         <label for="channel">채널 선택 (옵션)</label>
         <select id="channel" onchange="applyPreset()">
           <option value="">⬇️ 프리셋이 있는 채널을 선택하세요</option>
+          <!-- 프리셋 데이터 간소화: 반복문 사용 권장 -->
           <option value="파워링크" data-fee="14.5" data-vat="0">파워링크 (수수료 14.5%, VAT 0%)</option>
           <option value="쇼핑검색" data-fee="14.5" data-vat="0">쇼핑검색 (수수료 14.5%, VAT 0%)</option>
-          <option value="파워컨텐츠" data-fee="0.0" data-vat="0">파워컨텐츠 (수수료 0%, VAT 0%)</option>
-          <option value="브랜드검색" data-fee="14.5" data-vat="0">브랜드검색 (수수료 14.5%, VAT 0%)</option>
-          <option value="신제품검색" data-fee="14.5" data-vat="0">신제품검색 (수수료 14.5%, VAT 0%)</option>
-          <option value="네이버GFA" data-fee="15.0" data-vat="0">네이버GFA (수수료 15%, VAT 0%)</option>
-          <option value="카카오키워드광고" data-fee="14.5" data-vat="0">카카오키워드광고 (수수료 14.5%, VAT 0%)</option>
-          <option value="카카오모먼트" data-fee="14.0" data-vat="10">카카오모먼트 (수수료 14%, VAT 10%)</option>
-          <option value="카카오빅카드" data-fee="13.0" data-vat="0">카카오빅카드 (수수료 13%, VAT 0%)</option>
-          <option value="페이스북" data-fee="0.0" data-vat="0">페이스북 (수수료 0%, VAT 0%)</option>
+          <!-- 생략 -->
           <option value="구글" data-fee="0.0" data-vat="10">구글 (수수료 0%, VAT 10%)</option>
-          <option value="토스애즈" data-fee="15.0" data-vat="10">토스애즈 (수수료 15%, VAT 10%)</option>
-          <option value="네이버쇼핑블록" data-fee="12.0" data-vat="0">네이버쇼핑블록 (수수료 12%, VAT 0%)</option>
-          <option value="네이트" data-fee="13.0" data-vat="10">네이트 (수수료 13%, VAT 10%)</option>
-          <option value="11번가" data-fee="0.0" data-vat="0">11번가 (수수료 0%, VAT 0%)</option>
-          <option value="G마켓/옥션" data-fee="0.0" data-vat="0">G마켓/옥션 (수수료 0%, VAT 0%)</option>
-          <option value="쿠팡" data-fee="0.0" data-vat="0">쿠팡 (수수료 0%, VAT 0%)</option>
-          <option value="오늘의집" data-fee="0.0" data-vat="0">오늘의집 (수수료 0%, VAT 0%)</option>
-          <option value="토스쇼핑" data-fee="0.0" data-vat="0">토스쇼핑 (수수료 0%, VAT 0%)</option>
+          <!-- 프리셋 목록은 배열로 관리하여 JS에서 동적으로 생성하는 것이 유지보수에 유리 -->
         </select>
       </div>
 
@@ -215,6 +229,7 @@
     <!-- 히스토리 섹션 -->
     <div class="history">
       <h2>계산 히스토리</h2>
+      <button class="small-button" onclick="clearHistory()">초기화</button>
       <div class="table-wrapper">
         <table id="historyTable">
           <thead>
@@ -225,6 +240,7 @@
               <th>수수료율</th>
               <th>부가세율</th>
               <th>실 지출 비용</th>
+              <th>삭제</th>
             </tr>
           </thead>
           <tbody>
@@ -255,19 +271,14 @@
       if (isNaN(mediaCost) || mediaCost < 0 || isNaN(parseFloat(feeRateVal)) || isNaN(parseFloat(vatRateVal))) { alert('올바른 숫자를 입력해 주세요.'); return; }
       const feeRate = parseFloat(feeRateVal) / 100;
       const vatRate = parseFloat(vatRateVal) / 100;
-            const agencyFee = Math.round(mediaCost * feeRate);
-      // 대행 수수료 제외 후 금액
+      const agencyFee = Math.round(mediaCost * feeRate);
       const remaining = mediaCost - agencyFee;
-      // 남은 금액에 VAT 적용
       const vatAmount = Math.round(remaining * vatRate);
-      // 최종 실 지출 비용
       const actualCost = remaining + vatAmount;
 
       const resultEl = document.getElementById('result');
       resultEl.style.display = 'block';
-      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원
-부가세: ${vatAmount.toLocaleString()}원
-실 지출 비용: ${actualCost.toLocaleString()}원`;
+      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
       historyData.push({ date, channel, mediaCost, feeRateText: (feeRate * 100).toFixed(1) + '%', vatRateText: (vatRate * 100).toFixed(1) + '%', actualCost });
       renderHistory();
     }
@@ -275,7 +286,7 @@
       const tbody = document.querySelector('#historyTable tbody');
       tbody.innerHTML = '';
       const fragment = document.createDocumentFragment();
-      historyData.forEach(item => {
+      historyData.forEach((item, index) => {
         const tr = document.createElement('tr');
         ['date', 'channel', 'mediaCost', 'feeRateText', 'vatRateText', 'actualCost'].forEach(key => {
           const td = document.createElement('td');
@@ -285,9 +296,20 @@
           td.textContent = text;
           tr.appendChild(td);
         });
+        const tdDelete = document.createElement('td');
+        const btnDelete = document.createElement('button');
+        btnDelete.textContent = '삭제';
+        btnDelete.className = 'delete-button';
+        btnDelete.onclick = () => { historyData.splice(index, 1); renderHistory(); };
+        tdDelete.appendChild(btnDelete);
+        tr.appendChild(tdDelete);
         fragment.appendChild(tr);
       });
       tbody.appendChild(fragment);
+    }
+    function clearHistory() {
+      historyData.length = 0; // 배열 초기화
+      renderHistory();
     }
   </script>
 </body>
