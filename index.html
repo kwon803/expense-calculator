@@ -255,21 +255,19 @@
       if (isNaN(mediaCost) || mediaCost < 0 || isNaN(parseFloat(feeRateVal)) || isNaN(parseFloat(vatRateVal))) { alert('올바른 숫자를 입력해 주세요.'); return; }
       const feeRate = parseFloat(feeRateVal) / 100;
       const vatRate = parseFloat(vatRateVal) / 100;
-      const agencyFee = Math.round(mediaCost * feeRate);
-      let vatAmount;
-      let actualCost;
-      if (agencyFee === 0 && vatRate > 0) {
-        // 수수료가 0인 경우 매체 비용에 VAT 적용
-        vatAmount = Math.round(mediaCost * vatRate);
-        actualCost = mediaCost + vatAmount;
-      } else {
-        vatAmount = Math.round(agencyFee * vatRate);
-        const totalDeduction = agencyFee + vatAmount;
-        actualCost = mediaCost - totalDeduction;
-      }
+            const agencyFee = Math.round(mediaCost * feeRate);
+      // 대행 수수료 제외 후 금액
+      const remaining = mediaCost - agencyFee;
+      // 남은 금액에 VAT 적용
+      const vatAmount = Math.round(remaining * vatRate);
+      // 최종 실 지출 비용
+      const actualCost = remaining + vatAmount;
+
       const resultEl = document.getElementById('result');
       resultEl.style.display = 'block';
-      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
+      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원
+부가세: ${vatAmount.toLocaleString()}원
+실 지출 비용: ${actualCost.toLocaleString()}원`;
       historyData.push({ date, channel, mediaCost, feeRateText: (feeRate * 100).toFixed(1) + '%', vatRateText: (vatRate * 100).toFixed(1) + '%', actualCost });
       renderHistory();
     }
