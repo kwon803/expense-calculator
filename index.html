@@ -1,330 +1,2185 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="광고 매체 비용에서 대행 수수료와 부가세를 반영한 실 지출 비용을 계산하고 기록하는 도구" />
+  <meta name="color-scheme" content="light dark" />
   <title>실 지출 비용 계산기</title>
+  <script>
+    (() => {
+      try {
+        const savedTheme = localStorage.getItem('real-spend-theme');
+        const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.theme = savedTheme || systemTheme;
+      } catch (_) {
+        document.documentElement.dataset.theme = 'light';
+      }
+    })();
+  </script>
   <style>
-    /* 애플 스타일 컬러 팔레트 참조 */
     :root {
-      --bg-color: #f5f5f5;
-      --card-bg: #ffffff;
-      --primary: #007aff;
-      --text-primary: #1c1c1e;
-      --text-secondary: #6e6e73;
-      --border: #d1d1d6;
-      --hover-bg: rgba(0, 122, 255, 0.1);
+      --bg: #f4f6fb;
+      --surface: rgba(255, 255, 255, 0.92);
+      --surface-solid: #ffffff;
+      --surface-subtle: #f8f9fc;
+      --surface-strong: #eef1f7;
+      --text: #182230;
+      --text-soft: #344054;
+      --muted: #667085;
+      --muted-light: #98a2b3;
+      --border: #e4e7ec;
+      --border-strong: #d0d5dd;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-soft: #eef2ff;
+      --primary-ring: rgba(79, 70, 229, 0.18);
+      --success: #0f9f6e;
+      --success-soft: #ecfdf3;
+      --danger: #d92d20;
+      --danger-soft: #fef3f2;
+      --warning: #b54708;
+      --warning-soft: #fffaeb;
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+      --shadow-md: 0 16px 40px rgba(16, 24, 40, 0.08);
+      --shadow-lg: 0 24px 56px rgba(16, 24, 40, 0.12);
+      --radius-sm: 10px;
+      --radius-md: 16px;
+      --radius-lg: 24px;
+      --font: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
     }
-    * {
-      box-sizing: border-box; /* 전체 요소에 일관된 박스 모델 적용 */
-      margin: 0;
-      padding: 0;
+
+    html[data-theme="dark"] {
+      --bg: #0f1420;
+      --surface: rgba(24, 31, 45, 0.92);
+      --surface-solid: #181f2d;
+      --surface-subtle: #1e2736;
+      --surface-strong: #263244;
+      --text: #f2f4f7;
+      --text-soft: #d0d5dd;
+      --muted: #98a2b3;
+      --muted-light: #667085;
+      --border: #344054;
+      --border-strong: #475467;
+      --primary: #818cf8;
+      --primary-hover: #a5b4fc;
+      --primary-soft: rgba(99, 102, 241, 0.16);
+      --primary-ring: rgba(129, 140, 248, 0.22);
+      --success: #47cd89;
+      --success-soft: rgba(18, 183, 106, 0.12);
+      --danger: #f97066;
+      --danger-soft: rgba(240, 68, 56, 0.13);
+      --warning: #fdb022;
+      --warning-soft: rgba(247, 144, 9, 0.12);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 16px 40px rgba(0, 0, 0, 0.24);
+      --shadow-lg: 0 24px 56px rgba(0, 0, 0, 0.34);
     }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-primary);
-      padding: 20px;
-    }
-    h1, h2 {
-      margin-bottom: 16px;
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--text-primary);
-    }
-    .container {
-      display: flex;
-      gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .calculator, .history {
-      background: var(--card-bg);
-      border-radius: 12px;
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08); /* 그림자에 투명도 지정 */
-      padding: 24px;
-      flex: 1;
-    }
-    .calculator {
       min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 10% 0%, rgba(79, 70, 229, 0.12), transparent 30%),
+        radial-gradient(circle at 100% 12%, rgba(14, 165, 233, 0.10), transparent 28%),
+        var(--bg);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.2s ease, color 0.2s ease;
     }
-    .history {
-      max-height: 600px;
-      overflow-y: auto;
+
+    button, input, select {
+      font: inherit;
     }
-    .form-group {
-      margin-bottom: 20px;
+
+    button {
+      -webkit-tap-highlight-color: transparent;
     }
-    .form-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 500;
-      color: var(--text-secondary);
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid var(--primary-ring);
+      outline-offset: 2px;
     }
-    .form-group input,
-    .form-group select {
-      width: 100%;
-      padding: 12px 16px;
-      font-size: 1rem;
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .app-shell {
+      width: min(1480px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 34px 0 30px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      display: grid;
+      flex: 0 0 auto;
+      width: 52px;
+      height: 52px;
+      place-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.32);
+      border-radius: 17px;
+      color: #ffffff;
+      background: linear-gradient(145deg, #4f46e5, #2563eb 58%, #0ea5e9);
+      box-shadow: 0 12px 28px rgba(79, 70, 229, 0.28);
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .eyebrow {
+      margin: 0 0 3px;
+      color: var(--primary);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 34px);
+      line-height: 1.2;
+      letter-spacing: -0.035em;
+    }
+
+    .topbar-description {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 42px;
+      height: 42px;
+      padding: 0;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      background-color: #fafafa;
-      color: var(--text-primary);
-      transition: border-color 0.2s, background-color 0.2s;
-    }
-    .form-group input:focus,
-    .form-group select:focus {
-      border-color: var(--primary);
-      background-color: #ffffff;
-      outline: none;
-      box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
-    }
-    .button {
-      width: 100%;
-      padding: 14px;
-      background-color: var(--primary);
-      border: none;
-      border-radius: 8px;
-      color: #ffffff;
-      font-size: 1rem;
-      font-weight: 600;
+      border-radius: 13px;
+      color: var(--text-soft);
+      background: var(--surface);
+      box-shadow: var(--shadow-sm);
       cursor: pointer;
-      transition: background-color 0.2s;
-      margin-top: 10px;
+      transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
     }
-    .button:hover {
-      background-color: #005bb5;
+
+    .icon-button:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-solid);
+      transform: translateY(-1px);
     }
-    .small-button {
-      padding: 8px 12px;
-      font-size: 0.9rem;
-      margin-bottom: 12px;
-      background-color: #ff3b30;
-      border: none;
-      border-radius: 6px;
-      color: #ffffff;
-      cursor: pointer;
-      transition: background-color 0.2s;
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, 450px) minmax(0, 1fr);
+      align-items: start;
+      gap: 24px;
     }
-    .small-button:hover {
-      background-color: #e02b20;
-    }
-    .delete-button {
-      padding: 4px 8px;
-      font-size: 0.8rem;
-      background-color: #ff3b30;
-      border: none;
-      border-radius: 6px;
-      color: #ffffff;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .delete-button:hover {
-      background-color: #e02b20;
-    }
-    .result {
-      margin-top: 24px;
-      padding: 16px;
-      background-color: #f0f0f5;
-      border-radius: 8px;
-      font-size: 1rem;
-      font-weight: 500;
-      white-space: pre-line;
-      text-align: center;
-      color: var(--text-primary);
-    }
-    .note {
-      margin-top: 4px;
-      font-size: 0.85rem;
-      color: var(--text-secondary);
-      text-align: right;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.9rem;
-      color: var(--text-primary);
-    }
-    table th,
-    table td {
+
+    .panel {
+      min-width: 0;
       border: 1px solid var(--border);
-      padding: 12px 8px;
-      text-align: center;
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    .calculator-panel {
+      position: sticky;
+      top: 22px;
+      padding: 25px;
+    }
+
+    .history-panel {
+      padding: 25px;
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+
+    .panel-heading h2 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.25;
+      letter-spacing: -0.025em;
+    }
+
+    .panel-heading p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .mode-badge,
+    .count-badge {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      min-height: 28px;
+      padding: 5px 10px;
+      border: 1px solid rgba(79, 70, 229, 0.16);
+      border-radius: 999px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-size: 12px;
+      font-weight: 750;
       white-space: nowrap;
     }
-    table th {
-      background-color: #f9f9fb;
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 17px 14px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    .field-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 0 0 7px;
+      color: var(--text-soft);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .required-mark {
+      color: var(--danger);
+    }
+
+    .label-note {
+      color: var(--muted-light);
+      font-size: 11px;
       font-weight: 500;
-      color: var(--text-secondary);
     }
-    .table-wrapper {
-      overflow-x: auto;
+
+    .control-wrap {
+      position: relative;
     }
-    /* 반응형: 화면 너비가 768px 이하일 때 */
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
+
+    .control {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      color: var(--text);
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-sm);
+      transition: border-color 0.16s ease, box-shadow 0.16s ease, background-color 0.16s ease;
+    }
+
+    .control:hover {
+      border-color: var(--muted-light);
+    }
+
+    .control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px var(--primary-ring);
+      outline: none;
+    }
+
+    .control[aria-invalid="true"] {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px var(--danger-soft);
+    }
+
+    select.control {
+      appearance: none;
+      padding-right: 39px;
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+        linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+      background-position:
+        calc(100% - 18px) calc(50% - 2px),
+        calc(100% - 13px) calc(50% - 2px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+    }
+
+    .has-suffix .control {
+      padding-right: 43px;
+    }
+
+    .suffix {
+      position: absolute;
+      top: 50%;
+      right: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    .field-help,
+    .field-error {
+      min-height: 18px;
+      margin: 5px 2px 0;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+
+    .field-help {
+      color: var(--muted);
+    }
+
+    .field-error {
+      display: none;
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    .field.has-error .field-help {
+      display: none;
+    }
+
+    .field.has-error .field-error {
+      display: block;
+    }
+
+    .preset-status {
+      display: none;
+      grid-column: 1 / -1;
+      align-items: center;
+      gap: 7px;
+      margin-top: -4px;
+      padding: 10px 12px;
+      border: 1px solid rgba(15, 159, 110, 0.18);
+      border-radius: 11px;
+      color: var(--success);
+      background: var(--success-soft);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .preset-status.visible {
+      display: flex;
+    }
+
+    .preset-status::before {
+      content: "✓";
+      display: grid;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+      border-radius: 50%;
+      color: #ffffff;
+      background: var(--success);
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .formula-note {
+      grid-column: 1 / -1;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface-subtle);
+    }
+
+    .formula-note summary {
+      padding: 11px 13px;
+      color: var(--text-soft);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .formula-note p {
+      margin: 0;
+      padding: 0 13px 13px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .formula-note code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      color: var(--text-soft);
+      background: var(--surface-strong);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .form-actions {
+      display: grid;
+      grid-column: 1 / -1;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-height: 48px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 16px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background-color 0.16s ease;
+    }
+
+    .button:hover {
+      transform: translateY(-1px);
+    }
+
+    .button:active {
+      transform: translateY(0);
+    }
+
+    .button-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, var(--primary), #2563eb);
+      box-shadow: 0 10px 22px rgba(79, 70, 229, 0.22);
+    }
+
+    .button-primary:hover {
+      background: linear-gradient(135deg, var(--primary-hover), #1d4ed8);
+      box-shadow: 0 12px 26px rgba(79, 70, 229, 0.28);
+    }
+
+    .button-secondary {
+      color: var(--text-soft);
+      border-color: var(--border);
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .button-secondary:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-subtle);
+    }
+
+    .button-danger-ghost {
+      color: var(--danger);
+      border-color: transparent;
+      background: transparent;
+    }
+
+    .button-danger-ghost:hover {
+      background: var(--danger-soft);
+    }
+
+    .result-panel {
+      overflow: hidden;
+      margin-top: 20px;
+      border: 1px solid rgba(79, 70, 229, 0.18);
+      border-radius: 18px;
+      background: linear-gradient(145deg, var(--primary-soft), var(--surface-solid) 55%);
+      animation: result-in 0.25s ease both;
+    }
+
+    .result-panel[hidden] {
+      display: none;
+    }
+
+    .result-hero {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 18px 18px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-kicker {
+      margin: 0 0 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+    }
+
+    .result-amount {
+      margin: 0;
+      color: var(--primary);
+      font-size: clamp(27px, 4.2vw, 36px);
+      font-weight: 850;
+      line-height: 1.2;
+      letter-spacing: -0.045em;
+      word-break: break-all;
+    }
+
+    .result-delta {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .result-delta strong {
+      color: var(--text-soft);
+    }
+
+    .copy-button {
+      min-width: 66px;
+      min-height: 34px;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-soft);
+      background: var(--surface-solid);
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .copy-button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .breakdown-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+    }
+
+    .breakdown-item {
+      min-width: 0;
+      padding: 13px 10px;
+      background: var(--surface-solid);
+      text-align: center;
+    }
+
+    .breakdown-item span {
+      display: block;
+      overflow: hidden;
+      margin-bottom: 3px;
+      color: var(--muted);
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .breakdown-item strong {
+      display: block;
+      overflow: hidden;
+      color: var(--text-soft);
+      font-size: 13px;
+      letter-spacing: -0.02em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .result-formula {
+      margin: 0;
+      padding: 11px 14px;
+      color: var(--muted);
+      background: var(--surface-subtle);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .history-heading {
+      margin-bottom: 18px;
+    }
+
+    .history-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .compact-button {
+      display: inline-flex;
+      min-height: 36px;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-soft);
+      background: var(--surface-solid);
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: border-color 0.16s ease, background-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+    }
+
+    .compact-button:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .compact-button:disabled {
+      color: var(--muted-light);
+      background: var(--surface-subtle);
+      cursor: not-allowed;
+      opacity: 0.68;
+    }
+
+    .compact-button.danger:hover:not(:disabled) {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .summary-card {
+      min-width: 0;
+      padding: 13px 14px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: var(--surface-subtle);
+    }
+
+    .summary-card span {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 650;
+    }
+
+    .summary-card strong {
+      display: block;
+      overflow: hidden;
+      color: var(--text-soft);
+      font-size: 16px;
+      letter-spacing: -0.025em;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-toolbar {
+      display: grid;
+      grid-template-columns: minmax(180px, 1fr) 170px;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      top: 50%;
+      left: 13px;
+      color: var(--muted-light);
+      font-size: 14px;
+      pointer-events: none;
+      transform: translateY(-50%);
+    }
+
+    .search-wrap .control {
+      min-height: 42px;
+      padding-left: 37px;
+      font-size: 13px;
+    }
+
+    .history-toolbar select.control {
+      min-height: 42px;
+      font-size: 12px;
+    }
+
+    .table-shell {
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-solid);
+    }
+
+    .table-scroller {
+      max-height: 560px;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      min-width: 790px;
+      border-collapse: separate;
+      border-spacing: 0;
+      color: var(--text-soft);
+      font-size: 12px;
+    }
+
+    th, td {
+      padding: 12px 11px;
+      border-bottom: 1px solid var(--border);
+      text-align: right;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      position: sticky;
+      z-index: 1;
+      top: 0;
+      color: var(--muted);
+      background: var(--surface-subtle);
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    th:first-child, td:first-child,
+    th:nth-child(2), td:nth-child(2) {
+      text-align: left;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:hover td {
+      background: var(--surface-subtle);
+    }
+
+    .channel-cell {
+      display: inline-block;
+      overflow: hidden;
+      max-width: 130px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-size: 10px;
+      font-weight: 750;
+      text-overflow: ellipsis;
+      vertical-align: middle;
+    }
+
+    .amount-strong {
+      color: var(--text);
+      font-weight: 750;
+    }
+
+    .row-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 4px;
+    }
+
+    .row-button {
+      min-height: 30px;
+      padding: 5px 8px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-soft);
+      background: var(--surface-solid);
+      font-size: 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .row-button:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .row-button.delete:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .empty-state {
+      display: none;
+      padding: 55px 20px;
+      text-align: center;
+    }
+
+    .empty-state.visible {
+      display: block;
+    }
+
+    .empty-icon {
+      display: grid;
+      width: 50px;
+      height: 50px;
+      margin: 0 auto 12px;
+      place-items: center;
+      border-radius: 16px;
+      color: var(--primary);
+      background: var(--primary-soft);
+      font-size: 22px;
+    }
+
+    .empty-state h3 {
+      margin: 0 0 5px;
+      color: var(--text-soft);
+      font-size: 14px;
+    }
+
+    .empty-state p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mobile-history {
+      display: none;
+      gap: 10px;
+    }
+
+    .history-card {
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .history-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .history-card-date {
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .history-card-amount {
+      color: var(--primary);
+      font-size: 18px;
+      font-weight: 820;
+      letter-spacing: -0.03em;
+    }
+
+    .history-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+      margin-bottom: 12px;
+    }
+
+    .history-card-metric {
+      min-width: 0;
+      padding: 8px;
+      border-radius: 10px;
+      background: var(--surface-subtle);
+    }
+
+    .history-card-metric span {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--muted);
+      font-size: 9px;
+    }
+
+    .history-card-metric strong {
+      display: block;
+      overflow: hidden;
+      color: var(--text-soft);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-card-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .history-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .history-footer strong {
+      color: var(--text-soft);
+    }
+
+    .privacy-note {
+      margin: 14px 0 0;
+      color: var(--muted-light);
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .app-footer {
+      margin-top: 18px;
+      color: var(--muted-light);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 100;
+      right: 22px;
+      bottom: 22px;
+      display: flex;
+      max-width: min(380px, calc(100vw - 32px));
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      color: var(--text);
+      background: var(--surface-solid);
+      box-shadow: var(--shadow-lg);
+      font-size: 12px;
+      font-weight: 650;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(12px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+    }
+
+    .toast button {
+      padding: 4px 6px;
+      border: 0;
+      color: var(--primary);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    @keyframes result-in {
+      from { opacity: 0; transform: translateY(7px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1080px) {
+      .main-grid {
+        grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
       }
-      .history {
-        max-height: 300px;
-        margin-top: 20px;
+
+      .calculator-panel,
+      .history-panel {
+        padding: 21px;
+      }
+
+      .summary-card strong {
+        font-size: 14px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .calculator-panel {
+        position: static;
+      }
+
+      .table-scroller {
+        max-height: none;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app-shell {
+        width: min(100% - 24px, 1480px);
+        padding-top: 20px;
+      }
+
+      .topbar {
+        align-items: center;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        gap: 12px;
+      }
+
+      .brand-mark {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        font-size: 20px;
+      }
+
+      .topbar-description {
+        display: none;
+      }
+
+      .panel {
+        border-radius: 19px;
+      }
+
+      .calculator-panel,
+      .history-panel {
+        padding: 17px;
+      }
+
+      .panel-heading {
+        margin-bottom: 18px;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+      }
+
+      .field.full,
+      .formula-note,
+      .form-actions {
+        grid-column: auto;
+      }
+
+      .breakdown-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .breakdown-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 10px 14px;
+        text-align: left;
+      }
+
+      .breakdown-item span {
+        margin: 0;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .summary-card:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .history-toolbar {
+        grid-template-columns: 1fr;
+      }
+
+      .table-shell {
+        display: none;
+      }
+
+      .mobile-history {
+        display: grid;
+      }
+
+      .history-actions .compact-button .button-label {
+        display: none;
+      }
+
+      .history-actions .compact-button {
+        width: 36px;
+        padding: 0;
+        font-size: 15px;
+      }
+
+      .privacy-note {
+        text-align: left;
+      }
+
+      .toast {
+        right: 16px;
+        bottom: 16px;
+        left: 16px;
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 430px) {
+      .form-actions {
+        grid-template-columns: 1fr;
+      }
+
+      .button-secondary {
+        order: 2;
+      }
+
+      .history-card-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .history-card-metric:first-child {
+        grid-column: 1 / -1;
+      }
+
+      .result-hero {
+        align-items: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
       }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- 계산기 섹션 -->
-    <div class="calculator">
-      <h1>실 지출 비용 계산기</h1>
-
-      <!-- 1. 날짜 선택 -->
-      <div class="form-group">
-        <label for="date">날짜 선택 <span style="color:var(--primary);">*</span></label>
-        <input type="date" id="date" />
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">₩</div>
+        <div>
+          <p class="eyebrow">Marketing Cost Tool</p>
+          <h1>실 지출 비용 계산기</h1>
+          <p class="topbar-description">채널별 수수료 프리셋과 부가세를 반영해 실제 집행 금액을 빠르게 계산하세요.</p>
+        </div>
       </div>
+      <button type="button" id="themeToggle" class="icon-button" aria-label="다크 모드로 전환" title="테마 전환">
+        <span id="themeIcon" aria-hidden="true">☾</span>
+      </button>
+    </header>
 
-      <!-- 2. 채널 선택 -->
-      <div class="form-group">
-        <label for="channel">채널 선택 (옵션)</label>
-      <select id="channel" onchange="applyPreset()">
-  <option value="">⬇️ 프리셋이 있는 채널을 선택하세요</option>
-  <option value="파워링크" data-fee="14.5" data-vat="0">파워링크 (수수료 14.5%, VAT 0%)</option>
-  <option value="쇼핑검색" data-fee="14.5" data-vat="0">쇼핑검색 (수수료 14.5%, VAT 0%)</option>
-  <option value="파워컨텐츠" data-fee="0.0" data-vat="0">파워컨텐츠 (수수료 0.0%, VAT 0%)</option>
-  <option value="브랜드검색" data-fee="14.5" data-vat="0">브랜드검색 (수수료 14.5%, VAT 0%)</option>
-  <option value="신제품검색" data-fee="14.5" data-vat="0">신제품검색 (수수료 14.5%, VAT 0%)</option>
-  <option value="네이버GFA" data-fee="15.0" data-vat="0">네이버GFA (수수료 15.0%, VAT 0%)</option>
-  <option value="카카오키워드광고" data-fee="14.5" data-vat="0">카카오키워드광고 (수수료 14.5%, VAT 0%)</option>
-  <option value="카카오모먼트" data-fee="14.0" data-vat="10">카카오모먼트 (수수료 14.0%, VAT 10%)</option>
-  <option value="카카오빅카드" data-fee="13.0" data-vat="0">카카오빅카드 (수수료 13.0%, VAT 0%)</option>
-  <option value="페이스북" data-fee="0.0" data-vat="0">페이스북 (수수료 0.0%, VAT 0%)</option>
-  <option value="구글" data-fee="0.0" data-vat="10">구글 (수수료 0.0%, VAT 10%)</option>
-  <option value="토스애즈" data-fee="15.0" data-vat="10">토스애즈 (수수료 15.0%, VAT 10%)</option>
-  <option value="네이버쇼핑블록" data-fee="12.0" data-vat="0">네이버쇼핑블록 (수수료 12.0%, VAT 0%)</option>
-  <option value="네이트" data-fee="13.0" data-vat="10">네이트 (수수료 13.0%, VAT 10%)</option>
-  <option value="11번가" data-fee="0.0" data-vat="0">11번가 (수수료 0.0%, VAT 0%)</option>
-  <option value="G마켓/옥션" data-fee="0.0" data-vat="0">G마켓/옥션 (수수료 0.0%, VAT 0%)</option>
-  <option value="쿠팡" data-fee="0.0" data-vat="0">쿠팡 (수수료 0.0%, VAT 0%)</option>
-  <option value="오늘의집" data-fee="0.0" data-vat="0">오늘의집 (수수료 0.0%, VAT 0%)</option>
-  <option value="토스쇼핑" data-fee="0.0" data-vat="0">토스쇼핑 (수수료 0.0%, VAT 0%)</option>
-</select>
+    <main class="main-grid">
+      <section class="panel calculator-panel" aria-labelledby="calculatorTitle">
+        <div class="panel-heading">
+          <div>
+            <h2 id="calculatorTitle">비용 입력</h2>
+            <p>필수 항목을 입력하면 결과가 자동으로 미리 표시됩니다.</p>
+          </div>
+          <span class="mode-badge">수수료 차감형</span>
+        </div>
 
-      </div>
+        <form id="calculatorForm" novalidate>
+          <div class="form-grid">
+            <div class="field" data-field="date">
+              <label class="field-label" for="date">
+                <span>계산 날짜 <span class="required-mark" aria-hidden="true">*</span></span>
+              </label>
+              <div class="control-wrap">
+                <input class="control" type="date" id="date" required />
+              </div>
+              <p class="field-error" id="dateError">날짜를 선택해 주세요.</p>
+            </div>
 
-      <!-- 3. 매체 비용 입력 -->
-      <div class="form-group">
-        <label for="mediaCost">실제 매체 비용 <span style="color:var(--primary);">*</span> (원)</label>
-        <input type="number" id="mediaCost" placeholder="예: 100000" />
-        <div class="note">👉 소수점 없이 정수 입력</div>
-      </div>
+            <div class="field" data-field="channel">
+              <label class="field-label" for="channel">
+                <span>광고 채널</span>
+                <span class="label-note">선택</span>
+              </label>
+              <div class="control-wrap">
+                <select class="control" id="channel">
+                  <option value="">직접 설정 / 채널 없음</option>
+                  <optgroup label="네이버">
+                    <option value="파워링크" data-fee="14.5" data-vat="0">파워링크 · 14.5% / VAT 0%</option>
+                    <option value="쇼핑검색" data-fee="14.5" data-vat="0">쇼핑검색 · 14.5% / VAT 0%</option>
+                    <option value="파워컨텐츠" data-fee="0" data-vat="0">파워컨텐츠 · 0% / VAT 0%</option>
+                    <option value="브랜드검색" data-fee="14.5" data-vat="0">브랜드검색 · 14.5% / VAT 0%</option>
+                    <option value="신제품검색" data-fee="14.5" data-vat="0">신제품검색 · 14.5% / VAT 0%</option>
+                    <option value="네이버GFA" data-fee="15" data-vat="0">네이버 GFA · 15% / VAT 0%</option>
+                    <option value="네이버쇼핑블록" data-fee="12" data-vat="0">네이버 쇼핑블록 · 12% / VAT 0%</option>
+                  </optgroup>
+                  <optgroup label="카카오·포털">
+                    <option value="카카오키워드광고" data-fee="14.5" data-vat="0">카카오 키워드광고 · 14.5% / VAT 0%</option>
+                    <option value="카카오모먼트" data-fee="14" data-vat="10">카카오모먼트 · 14% / VAT 10%</option>
+                    <option value="카카오빅카드" data-fee="13" data-vat="0">카카오 빅카드 · 13% / VAT 0%</option>
+                    <option value="네이트" data-fee="13" data-vat="10">네이트 · 13% / VAT 10%</option>
+                  </optgroup>
+                  <optgroup label="글로벌·기타">
+                    <option value="페이스북" data-fee="0" data-vat="0">페이스북 · 0% / VAT 0%</option>
+                    <option value="구글" data-fee="0" data-vat="10">구글 · 0% / VAT 10%</option>
+                    <option value="토스애즈" data-fee="15" data-vat="10">토스애즈 · 15% / VAT 10%</option>
+                  </optgroup>
+                  <optgroup label="커머스">
+                    <option value="11번가" data-fee="0" data-vat="0">11번가 · 0% / VAT 0%</option>
+                    <option value="G마켓/옥션" data-fee="0" data-vat="0">G마켓/옥션 · 0% / VAT 0%</option>
+                    <option value="쿠팡" data-fee="0" data-vat="0">쿠팡 · 0% / VAT 0%</option>
+                    <option value="오늘의집" data-fee="0" data-vat="0">오늘의집 · 0% / VAT 0%</option>
+                    <option value="토스쇼핑" data-fee="0" data-vat="0">토스쇼핑 · 0% / VAT 0%</option>
+                  </optgroup>
+                  <option value="__custom__">기타 채널 직접 입력</option>
+                </select>
+              </div>
+              <p class="field-help">프리셋 선택 시 요율이 자동 입력됩니다.</p>
+            </div>
 
-      <!-- 4. 수수료율 입력 -->
-      <div class="form-group">
-        <label for="feeRate">대행 수수료율 <span style="color:var(--primary);">*</span> (%)</label>
-        <input type="number" id="feeRate" placeholder="예: 14.5" step="0.1" />
-        <div class="note">프리셋 선택 시 자동 입력</div>
-      </div>
+            <div class="field full" id="customChannelField" data-field="customChannel" hidden>
+              <label class="field-label" for="customChannel">
+                <span>기타 채널명 <span class="required-mark" aria-hidden="true">*</span></span>
+              </label>
+              <div class="control-wrap">
+                <input class="control" type="text" id="customChannel" maxlength="30" placeholder="예: 리워드 광고" autocomplete="off" />
+              </div>
+              <p class="field-error" id="customChannelError">채널명을 입력해 주세요.</p>
+            </div>
 
-      <!-- 5. VAT율 입력 -->
-      <div class="form-group">
-        <label for="vatRate">부가세율 <span style="color:var(--primary);">*</span> (%)</label>
-        <input type="number" id="vatRate" placeholder="예: 10" step="0.1" />
-        <div class="note">프리셋 선택 시 자동 입력</div>
-      </div>
+            <div class="field full" data-field="mediaCost">
+              <label class="field-label" for="mediaCost">
+                <span>실제 매체 비용 <span class="required-mark" aria-hidden="true">*</span></span>
+                <span class="label-note">정수</span>
+              </label>
+              <div class="control-wrap has-suffix">
+                <input
+                  class="control"
+                  type="text"
+                  id="mediaCost"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  maxlength="19"
+                  placeholder="예: 1,000,000"
+                  aria-describedby="mediaCostHelp mediaCostError"
+                  required
+                />
+                <span class="suffix">원</span>
+              </div>
+              <p class="field-help" id="mediaCostHelp">쉼표는 자동으로 입력됩니다.</p>
+              <p class="field-error" id="mediaCostError">0원 이상의 금액을 입력해 주세요.</p>
+            </div>
 
-      <!-- 6. 계산 버튼 -->
-      <button class="button" onclick="calculate()">실 지출 비용 계산</button>
+            <div class="field" data-field="feeRate">
+              <label class="field-label" for="feeRate">
+                <span>대행 수수료율 <span class="required-mark" aria-hidden="true">*</span></span>
+              </label>
+              <div class="control-wrap has-suffix">
+                <input class="control" type="number" id="feeRate" min="0" max="100" step="0.1" inputmode="decimal" placeholder="14.5" required />
+                <span class="suffix">%</span>
+              </div>
+              <p class="field-error" id="feeRateError">0~100 사이의 요율을 입력해 주세요.</p>
+            </div>
 
-      <!-- 7. 계산 결과 -->
-      <div id="result" class="result" style="display: none;"></div>
-    </div>
+            <div class="field" data-field="vatRate">
+              <label class="field-label" for="vatRate">
+                <span>부가세율 <span class="required-mark" aria-hidden="true">*</span></span>
+              </label>
+              <div class="control-wrap has-suffix">
+                <input class="control" type="number" id="vatRate" min="0" max="100" step="0.1" inputmode="decimal" placeholder="10" required />
+                <span class="suffix">%</span>
+              </div>
+              <p class="field-error" id="vatRateError">0~100 사이의 요율을 입력해 주세요.</p>
+            </div>
 
-    <!-- 히스토리 섹션 -->
-    <div class="history">
-      <h2>계산 히스토리</h2>
-      <button class="small-button" onclick="clearHistory()">초기화</button>
-      <div class="table-wrapper">
-        <table id="historyTable">
-          <thead>
-            <tr>
-              <th>날짜</th>
-              <th>채널</th>
-              <th>매체 비용</th>
-              <th>수수료율</th>
-              <th>부가세율</th>
-              <th>실 지출 비용</th>
-              <th>삭제</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- 히스토리 항목이 여기에 추가됩니다 -->
-          </tbody>
-        </table>
-      </div>
-    </div>
+            <div id="presetStatus" class="preset-status full" aria-live="polite"></div>
+
+            <details class="formula-note">
+              <summary>계산 기준 확인</summary>
+              <p>
+                <code>대행 수수료 = 매체 비용 × 수수료율</code><br />
+                <code>수수료 차감 후 금액 = 매체 비용 − 대행 수수료</code><br />
+                <code>부가세 = 수수료 차감 후 금액 × 부가세율</code><br />
+                <code>실 지출 비용 = 수수료 차감 후 금액 + 부가세</code>
+              </p>
+            </details>
+
+            <div class="form-actions">
+              <button type="submit" class="button button-primary">
+                <span aria-hidden="true">＋</span>
+                계산하고 기록
+              </button>
+              <button type="button" id="resetButton" class="button button-secondary">입력 초기화</button>
+            </div>
+          </div>
+        </form>
+
+        <section id="resultPanel" class="result-panel" aria-labelledby="resultTitle" aria-live="polite" hidden>
+          <div class="result-hero">
+            <div>
+              <p class="result-kicker" id="resultTitle">예상 실 지출 비용</p>
+              <p class="result-amount" id="actualCostResult">0원</p>
+              <p class="result-delta" id="resultDelta"></p>
+            </div>
+            <button type="button" id="copyResultButton" class="copy-button">결과 복사</button>
+          </div>
+          <div class="breakdown-grid">
+            <div class="breakdown-item">
+              <span>대행 수수료</span>
+              <strong id="agencyFeeResult">0원</strong>
+            </div>
+            <div class="breakdown-item">
+              <span>수수료 차감 후</span>
+              <strong id="remainingResult">0원</strong>
+            </div>
+            <div class="breakdown-item">
+              <span>부가세</span>
+              <strong id="vatAmountResult">0원</strong>
+            </div>
+          </div>
+          <p class="result-formula">금액은 각 단계에서 원 단위로 반올림됩니다.</p>
+        </section>
+      </section>
+
+      <section class="panel history-panel" aria-labelledby="historyTitle">
+        <div class="panel-heading history-heading">
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <h2 id="historyTitle">계산 히스토리</h2>
+              <span class="count-badge" id="historyCountBadge">0건</span>
+            </div>
+            <p>기록을 검색하거나 CSV 파일로 내려받을 수 있습니다.</p>
+          </div>
+          <div class="history-actions">
+            <button type="button" id="exportButton" class="compact-button" disabled title="CSV 내보내기">
+              <span class="button-icon" aria-hidden="true">⇩</span><span class="button-label">CSV</span>
+            </button>
+            <button type="button" id="clearButton" class="compact-button danger" disabled title="전체 기록 삭제">
+              <span class="button-icon" aria-hidden="true">⌫</span><span class="button-label">전체 삭제</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="summary-grid" aria-label="전체 기록 요약">
+          <div class="summary-card">
+            <span>전체 기록</span>
+            <strong id="summaryCount">0건</strong>
+          </div>
+          <div class="summary-card">
+            <span>매체 비용 합계</span>
+            <strong id="summaryMediaCost">0원</strong>
+          </div>
+          <div class="summary-card">
+            <span>실 지출 합계</span>
+            <strong id="summaryActualCost">0원</strong>
+          </div>
+        </div>
+
+        <div class="history-toolbar">
+          <label class="search-wrap">
+            <span class="sr-only">히스토리 검색</span>
+            <span class="search-icon" aria-hidden="true">⌕</span>
+            <input class="control" type="search" id="historySearch" placeholder="날짜·채널·금액 검색" autocomplete="off" />
+          </label>
+          <label>
+            <span class="sr-only">히스토리 정렬</span>
+            <select class="control" id="historySort">
+              <option value="newest">최근 기록순</option>
+              <option value="oldest">오래된 기록순</option>
+              <option value="actual-desc">실 지출 높은순</option>
+              <option value="actual-asc">실 지출 낮은순</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="emptyState" class="empty-state visible">
+          <div class="empty-icon" aria-hidden="true">▤</div>
+          <h3>아직 계산 기록이 없습니다.</h3>
+          <p>왼쪽 계산기에서 첫 기록을 추가해 보세요.</p>
+        </div>
+
+        <div id="noResultState" class="empty-state">
+          <div class="empty-icon" aria-hidden="true">⌕</div>
+          <h3>검색 결과가 없습니다.</h3>
+          <p>다른 날짜, 채널 또는 금액으로 검색해 보세요.</p>
+        </div>
+
+        <div id="tableShell" class="table-shell" hidden>
+          <div class="table-scroller">
+            <table>
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>채널</th>
+                  <th>매체 비용</th>
+                  <th>수수료</th>
+                  <th>VAT</th>
+                  <th>실 지출</th>
+                  <th><span class="sr-only">작업</span></th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="mobileHistory" class="mobile-history"></div>
+
+        <div id="historyFooter" class="history-footer" hidden>
+          <span id="filteredCountText">0건 표시</span>
+          <span>표시 합계 <strong id="filteredActualCost">0원</strong></span>
+        </div>
+
+        <p class="privacy-note">히스토리는 현재 브라우저의 로컬 저장소에만 보관됩니다.</p>
+      </section>
+    </main>
+
+    <footer class="app-footer">계산 결과는 입력한 요율과 위 계산 기준에 따른 참고값입니다.</footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true">
+    <span id="toastMessage"></span>
+    <button type="button" id="toastAction" hidden></button>
   </div>
 
   <script>
-    const historyData = [];
-    function applyPreset() {
-      const option = document.getElementById('channel').options[document.getElementById('channel').selectedIndex];
-      const fee = option.getAttribute('data-fee');
-      const vat = option.getAttribute('data-vat');
-      if (fee && vat) {
-        document.getElementById('feeRate').value = fee;
-        document.getElementById('vatRate').value = vat;
+    'use strict';
+
+    const STORAGE_KEY = 'real-spend-calculator-history-v2';
+    const THEME_KEY = 'real-spend-theme';
+    const HISTORY_LIMIT = 500;
+    const currencyFormatter = new Intl.NumberFormat('ko-KR');
+    const dateFormatter = new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+
+    const elements = {
+      form: document.getElementById('calculatorForm'),
+      date: document.getElementById('date'),
+      channel: document.getElementById('channel'),
+      customChannelField: document.getElementById('customChannelField'),
+      customChannel: document.getElementById('customChannel'),
+      mediaCost: document.getElementById('mediaCost'),
+      feeRate: document.getElementById('feeRate'),
+      vatRate: document.getElementById('vatRate'),
+      presetStatus: document.getElementById('presetStatus'),
+      resetButton: document.getElementById('resetButton'),
+      resultPanel: document.getElementById('resultPanel'),
+      actualCostResult: document.getElementById('actualCostResult'),
+      resultDelta: document.getElementById('resultDelta'),
+      agencyFeeResult: document.getElementById('agencyFeeResult'),
+      remainingResult: document.getElementById('remainingResult'),
+      vatAmountResult: document.getElementById('vatAmountResult'),
+      copyResultButton: document.getElementById('copyResultButton'),
+      historyCountBadge: document.getElementById('historyCountBadge'),
+      summaryCount: document.getElementById('summaryCount'),
+      summaryMediaCost: document.getElementById('summaryMediaCost'),
+      summaryActualCost: document.getElementById('summaryActualCost'),
+      historySearch: document.getElementById('historySearch'),
+      historySort: document.getElementById('historySort'),
+      exportButton: document.getElementById('exportButton'),
+      clearButton: document.getElementById('clearButton'),
+      emptyState: document.getElementById('emptyState'),
+      noResultState: document.getElementById('noResultState'),
+      tableShell: document.getElementById('tableShell'),
+      historyTableBody: document.getElementById('historyTableBody'),
+      mobileHistory: document.getElementById('mobileHistory'),
+      historyFooter: document.getElementById('historyFooter'),
+      filteredCountText: document.getElementById('filteredCountText'),
+      filteredActualCost: document.getElementById('filteredActualCost'),
+      themeToggle: document.getElementById('themeToggle'),
+      themeIcon: document.getElementById('themeIcon'),
+      toast: document.getElementById('toast'),
+      toastMessage: document.getElementById('toastMessage'),
+      toastAction: document.getElementById('toastAction')
+    };
+
+    let historyData = loadHistory();
+    let currentResult = null;
+    let toastTimer = null;
+
+    function getLocalDateString(date = new Date()) {
+      const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+      return localDate.toISOString().slice(0, 10);
+    }
+
+    function formatCurrency(value) {
+      return `${currencyFormatter.format(Math.round(Number(value) || 0))}원`;
+    }
+
+    function formatInputCurrency(value) {
+      const digits = String(value ?? '').replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+      return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+    }
+
+    function parseCurrencyInput(value) {
+      const normalized = String(value ?? '').replace(/,/g, '').trim();
+      if (normalized === '') return NaN;
+      return Number(normalized);
+    }
+
+    function parseRateInput(value) {
+      const normalized = String(value ?? '').trim();
+      return normalized === '' ? NaN : Number(normalized);
+    }
+
+    function formatRate(value) {
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '0%';
+      return `${Number.isInteger(number) ? number.toFixed(0) : number.toFixed(1)}%`;
+    }
+
+    function formatDate(dateString) {
+      const [year, month, day] = String(dateString).split('-').map(Number);
+      if (!year || !month || !day) return dateString;
+      return dateFormatter.format(new Date(year, month - 1, day));
+    }
+
+    function createId() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function calculateValues(mediaCost, feeRate, vatRate) {
+      const agencyFee = Math.round(mediaCost * (feeRate / 100));
+      const remaining = mediaCost - agencyFee;
+      const vatAmount = Math.round(remaining * (vatRate / 100));
+      const actualCost = remaining + vatAmount;
+      return { agencyFee, remaining, vatAmount, actualCost };
+    }
+
+    function setFieldError(fieldName, message = '') {
+      const field = document.querySelector(`[data-field="${fieldName}"]`);
+      const input = field?.querySelector('input, select');
+      const error = field?.querySelector('.field-error');
+      if (!field || !input) return;
+
+      const hasError = Boolean(message);
+      field.classList.toggle('has-error', hasError);
+      input.setAttribute('aria-invalid', String(hasError));
+      if (error && message) error.textContent = message;
+    }
+
+    function clearAllErrors() {
+      ['date', 'customChannel', 'mediaCost', 'feeRate', 'vatRate'].forEach((name) => setFieldError(name));
+    }
+
+    function getSelectedChannelName() {
+      if (elements.channel.value === '__custom__') {
+        return elements.customChannel.value.trim();
+      }
+      return elements.channel.value || '-';
+    }
+
+    function getFormValues({ showErrors = false } = {}) {
+      const values = {
+        date: elements.date.value,
+        channel: getSelectedChannelName(),
+        mediaCost: parseCurrencyInput(elements.mediaCost.value),
+        feeRate: parseRateInput(elements.feeRate.value),
+        vatRate: parseRateInput(elements.vatRate.value)
+      };
+
+      const errors = {};
+      if (!values.date) errors.date = '날짜를 선택해 주세요.';
+      if (elements.channel.value === '__custom__' && !values.channel) errors.customChannel = '채널명을 입력해 주세요.';
+      if (!Number.isFinite(values.mediaCost) || values.mediaCost < 0 || !Number.isSafeInteger(values.mediaCost)) {
+        errors.mediaCost = '0원 이상의 안전한 정수 금액을 입력해 주세요.';
+      }
+      if (!Number.isFinite(values.feeRate) || values.feeRate < 0 || values.feeRate > 100) {
+        errors.feeRate = '0~100 사이의 수수료율을 입력해 주세요.';
+      }
+      if (!Number.isFinite(values.vatRate) || values.vatRate < 0 || values.vatRate > 100) {
+        errors.vatRate = '0~100 사이의 부가세율을 입력해 주세요.';
+      }
+
+      if (showErrors) {
+        clearAllErrors();
+        Object.entries(errors).forEach(([name, message]) => setFieldError(name, message));
+      }
+
+      return { values, errors, isValid: Object.keys(errors).length === 0 };
+    }
+
+    function updateResult(values) {
+      const result = calculateValues(values.mediaCost, values.feeRate, values.vatRate);
+      currentResult = { ...values, ...result };
+
+      elements.actualCostResult.textContent = formatCurrency(result.actualCost);
+      elements.agencyFeeResult.textContent = formatCurrency(result.agencyFee);
+      elements.remainingResult.textContent = formatCurrency(result.remaining);
+      elements.vatAmountResult.textContent = formatCurrency(result.vatAmount);
+
+      const difference = result.actualCost - values.mediaCost;
+      if (difference === 0) {
+        elements.resultDelta.innerHTML = '입력한 매체 비용과 <strong>동일합니다.</strong>';
+      } else {
+        const direction = difference > 0 ? '증가' : '감소';
+        elements.resultDelta.innerHTML = `매체 비용 대비 <strong>${formatCurrency(Math.abs(difference))} ${direction}</strong>`;
+      }
+
+      elements.resultPanel.hidden = false;
+    }
+
+    function updateLivePreview() {
+      const { values, isValid } = getFormValues();
+      if (isValid) {
+        updateResult(values);
+      } else {
+        currentResult = null;
+        elements.resultPanel.hidden = true;
       }
     }
-    function calculate() {
-      const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
-      const channel = document.getElementById('channel').value || '-';
-      const mediaCost = parseInt(document.getElementById('mediaCost').value, 10);
-      const feeRateVal = document.getElementById('feeRate').value;
-      const vatRateVal = document.getElementById('vatRate').value;
-      if (isNaN(mediaCost) || mediaCost < 0 || isNaN(parseFloat(feeRateVal)) || isNaN(parseFloat(vatRateVal))) { alert('올바른 숫자를 입력해 주세요.'); return; }
-      const feeRate = parseFloat(feeRateVal) / 100;
-      const vatRate = parseFloat(vatRateVal) / 100;
-      const agencyFee = Math.round(mediaCost * feeRate);
-      const remaining = mediaCost - agencyFee;
-      const vatAmount = Math.round(remaining * vatRate);
-      const actualCost = remaining + vatAmount;
 
-      const resultEl = document.getElementById('result');
-      resultEl.style.display = 'block';
-      resultEl.textContent = `대행 수수료: ${agencyFee.toLocaleString()}원\n부가세: ${vatAmount.toLocaleString()}원\n실 지출 비용: ${actualCost.toLocaleString()}원`;
-      historyData.push({ date, channel, mediaCost, feeRateText: (feeRate * 100).toFixed(1) + '%', vatRateText: (vatRate * 100).toFixed(1) + '%', actualCost });
-      renderHistory();
+    function handlePresetChange() {
+      const selectedOption = elements.channel.options[elements.channel.selectedIndex];
+      const isCustom = elements.channel.value === '__custom__';
+      const fee = selectedOption?.dataset.fee;
+      const vat = selectedOption?.dataset.vat;
+
+      elements.customChannelField.hidden = !isCustom;
+      if (!isCustom) {
+        elements.customChannel.value = '';
+        setFieldError('customChannel');
+      }
+
+      if (fee !== undefined && vat !== undefined) {
+        elements.feeRate.value = fee;
+        elements.vatRate.value = vat;
+        elements.presetStatus.textContent = `${selectedOption.value} 프리셋 적용 · 수수료 ${formatRate(fee)}, VAT ${formatRate(vat)}`;
+        elements.presetStatus.classList.add('visible');
+        setFieldError('feeRate');
+        setFieldError('vatRate');
+      } else {
+        elements.presetStatus.classList.remove('visible');
+        elements.presetStatus.textContent = '';
+      }
+
+      if (isCustom) {
+        elements.customChannel.focus();
+      }
+      updateLivePreview();
     }
-    function renderHistory() {
-      const tbody = document.querySelector('#historyTable tbody');
-      tbody.innerHTML = '';
-      const fragment = document.createDocumentFragment();
-      historyData.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        ['date', 'channel', 'mediaCost', 'feeRateText', 'vatRateText', 'actualCost'].forEach(key => {
-          const td = document.createElement('td');
-          let text = item[key];
-          if (key === 'mediaCost') text = text.toLocaleString() + '원';
-          if (key === 'actualCost') text = text.toLocaleString() + '원';
-          td.textContent = text;
-          tr.appendChild(td);
-        });
-        const tdDelete = document.createElement('td');
-        const btnDelete = document.createElement('button');
-        btnDelete.textContent = '삭제';
-        btnDelete.className = 'delete-button';
-        btnDelete.onclick = () => { historyData.splice(index, 1); renderHistory(); };
-        tdDelete.appendChild(btnDelete);
-        tr.appendChild(tdDelete);
-        fragment.appendChild(tr);
+
+    function resetForm({ keepResult = false } = {}) {
+      elements.form.reset();
+      elements.date.value = getLocalDateString();
+      elements.customChannelField.hidden = true;
+      elements.presetStatus.classList.remove('visible');
+      elements.presetStatus.textContent = '';
+      clearAllErrors();
+      currentResult = null;
+      if (!keepResult) elements.resultPanel.hidden = true;
+      elements.mediaCost.focus();
+    }
+
+    function normalizeHistoryItem(item) {
+      if (!item || typeof item !== 'object') return null;
+      const mediaCost = Number(item.mediaCost);
+      const feeRate = Number(item.feeRate);
+      const vatRate = Number(item.vatRate);
+      const agencyFee = Number(item.agencyFee);
+      const remaining = Number(item.remaining);
+      const vatAmount = Number(item.vatAmount);
+      const actualCost = Number(item.actualCost);
+      const createdAt = Number(item.createdAt) || Date.now();
+
+      if (
+        !item.date ||
+        !Number.isFinite(mediaCost) ||
+        !Number.isFinite(feeRate) ||
+        !Number.isFinite(vatRate) ||
+        !Number.isFinite(actualCost)
+      ) return null;
+
+      const recalculated = calculateValues(mediaCost, feeRate, vatRate);
+      return {
+        id: String(item.id || createId()),
+        date: String(item.date),
+        channel: String(item.channel || '-').slice(0, 30),
+        mediaCost,
+        feeRate,
+        vatRate,
+        agencyFee: Number.isFinite(agencyFee) ? agencyFee : recalculated.agencyFee,
+        remaining: Number.isFinite(remaining) ? remaining : recalculated.remaining,
+        vatAmount: Number.isFinite(vatAmount) ? vatAmount : recalculated.vatAmount,
+        actualCost,
+        createdAt
+      };
+    }
+
+    function loadHistory() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.map(normalizeHistoryItem).filter(Boolean).slice(0, HISTORY_LIMIT);
+      } catch (error) {
+        console.warn('히스토리를 불러오지 못했습니다.', error);
+        return [];
+      }
+    }
+
+    function saveHistory() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(historyData.slice(0, HISTORY_LIMIT)));
+        return true;
+      } catch (error) {
+        console.warn('히스토리를 저장하지 못했습니다.', error);
+        showToast('브라우저 저장 공간에 기록을 저장하지 못했습니다.');
+        return false;
+      }
+    }
+
+    function getFilteredHistory() {
+      const rawQuery = elements.historySearch.value.trim().toLocaleLowerCase('ko-KR');
+      const numericQuery = rawQuery.replace(/[^0-9]/g, '');
+
+      const filtered = historyData.filter((item) => {
+        if (!rawQuery) return true;
+        const searchable = [
+          item.date,
+          formatDate(item.date),
+          item.channel,
+          String(item.mediaCost),
+          currencyFormatter.format(item.mediaCost),
+          String(item.actualCost),
+          currencyFormatter.format(item.actualCost),
+          formatRate(item.feeRate),
+          formatRate(item.vatRate)
+        ].join(' ').toLocaleLowerCase('ko-KR');
+
+        if (searchable.includes(rawQuery)) return true;
+        if (numericQuery) {
+          return String(item.mediaCost).includes(numericQuery) || String(item.actualCost).includes(numericQuery);
+        }
+        return false;
       });
-      tbody.appendChild(fragment);
+
+      const sort = elements.historySort.value;
+      return filtered.sort((a, b) => {
+        if (sort === 'oldest') return a.createdAt - b.createdAt;
+        if (sort === 'actual-desc') return b.actualCost - a.actualCost || b.createdAt - a.createdAt;
+        if (sort === 'actual-asc') return a.actualCost - b.actualCost || b.createdAt - a.createdAt;
+        return b.createdAt - a.createdAt;
+      });
     }
-    function clearHistory() {
-      historyData.length = 0; // 배열 초기화
+
+    function createTableRow(item) {
+      const row = document.createElement('tr');
+
+      const dateCell = document.createElement('td');
+      dateCell.textContent = formatDate(item.date);
+      row.appendChild(dateCell);
+
+      const channelCell = document.createElement('td');
+      const channelBadge = document.createElement('span');
+      channelBadge.className = 'channel-cell';
+      channelBadge.textContent = item.channel;
+      channelBadge.title = item.channel;
+      channelCell.appendChild(channelBadge);
+      row.appendChild(channelCell);
+
+      const mediaCell = document.createElement('td');
+      mediaCell.textContent = formatCurrency(item.mediaCost);
+      row.appendChild(mediaCell);
+
+      const feeCell = document.createElement('td');
+      feeCell.textContent = formatRate(item.feeRate);
+      feeCell.title = `대행 수수료 ${formatCurrency(item.agencyFee)}`;
+      row.appendChild(feeCell);
+
+      const vatCell = document.createElement('td');
+      vatCell.textContent = formatRate(item.vatRate);
+      vatCell.title = `부가세 ${formatCurrency(item.vatAmount)}`;
+      row.appendChild(vatCell);
+
+      const actualCell = document.createElement('td');
+      actualCell.className = 'amount-strong';
+      actualCell.textContent = formatCurrency(item.actualCost);
+      row.appendChild(actualCell);
+
+      const actionsCell = document.createElement('td');
+      const actions = document.createElement('div');
+      actions.className = 'row-actions';
+      actions.append(
+        createRowButton('불러오기', () => loadHistoryItem(item.id)),
+        createRowButton('삭제', () => deleteHistoryItem(item.id), 'delete')
+      );
+      actionsCell.appendChild(actions);
+      row.appendChild(actionsCell);
+
+      return row;
+    }
+
+    function createRowButton(label, onClick, extraClass = '') {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `row-button ${extraClass}`.trim();
+      button.textContent = label;
+      button.addEventListener('click', onClick);
+      return button;
+    }
+
+    function createMobileHistoryCard(item) {
+      const card = document.createElement('article');
+      card.className = 'history-card';
+
+      const top = document.createElement('div');
+      top.className = 'history-card-top';
+
+      const identity = document.createElement('div');
+      const channelBadge = document.createElement('span');
+      channelBadge.className = 'channel-cell';
+      channelBadge.textContent = item.channel;
+      const date = document.createElement('div');
+      date.className = 'history-card-date';
+      date.textContent = formatDate(item.date);
+      identity.append(channelBadge, date);
+
+      const actual = document.createElement('div');
+      actual.className = 'history-card-amount';
+      actual.textContent = formatCurrency(item.actualCost);
+      top.append(identity, actual);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'history-card-grid';
+      metrics.append(
+        createMetric('매체 비용', formatCurrency(item.mediaCost)),
+        createMetric('수수료', `${formatRate(item.feeRate)} · ${formatCurrency(item.agencyFee)}`),
+        createMetric('부가세', `${formatRate(item.vatRate)} · ${formatCurrency(item.vatAmount)}`)
+      );
+
+      const actions = document.createElement('div');
+      actions.className = 'history-card-actions';
+      actions.append(
+        createRowButton('입력값 불러오기', () => loadHistoryItem(item.id)),
+        createRowButton('기록 삭제', () => deleteHistoryItem(item.id), 'delete')
+      );
+
+      card.append(top, metrics, actions);
+      return card;
+    }
+
+    function createMetric(label, value) {
+      const metric = document.createElement('div');
+      metric.className = 'history-card-metric';
+      const labelElement = document.createElement('span');
+      labelElement.textContent = label;
+      const valueElement = document.createElement('strong');
+      valueElement.textContent = value;
+      valueElement.title = value;
+      metric.append(labelElement, valueElement);
+      return metric;
+    }
+
+    function renderHistory() {
+      const filtered = getFilteredHistory();
+      const hasHistory = historyData.length > 0;
+      const hasFiltered = filtered.length > 0;
+
+      elements.historyCountBadge.textContent = `${historyData.length}건`;
+      elements.summaryCount.textContent = `${historyData.length}건`;
+      elements.summaryMediaCost.textContent = formatCurrency(historyData.reduce((sum, item) => sum + item.mediaCost, 0));
+      elements.summaryActualCost.textContent = formatCurrency(historyData.reduce((sum, item) => sum + item.actualCost, 0));
+      elements.exportButton.disabled = !hasHistory;
+      elements.clearButton.disabled = !hasHistory;
+
+      elements.emptyState.classList.toggle('visible', !hasHistory);
+      elements.noResultState.classList.toggle('visible', hasHistory && !hasFiltered);
+      elements.tableShell.hidden = !hasFiltered;
+      elements.historyFooter.hidden = !hasFiltered;
+
+      elements.historyTableBody.replaceChildren(...filtered.map(createTableRow));
+      elements.mobileHistory.replaceChildren(...filtered.map(createMobileHistoryCard));
+
+      const filteredTotal = filtered.reduce((sum, item) => sum + item.actualCost, 0);
+      elements.filteredCountText.textContent = historyData.length === filtered.length
+        ? `${filtered.length}건 표시`
+        : `전체 ${historyData.length}건 중 ${filtered.length}건 표시`;
+      elements.filteredActualCost.textContent = formatCurrency(filteredTotal);
+    }
+
+    function addHistory(values) {
+      const result = calculateValues(values.mediaCost, values.feeRate, values.vatRate);
+      const item = {
+        id: createId(),
+        ...values,
+        ...result,
+        createdAt: Date.now()
+      };
+      historyData.unshift(item);
+      if (historyData.length > HISTORY_LIMIT) historyData = historyData.slice(0, HISTORY_LIMIT);
+      saveHistory();
       renderHistory();
+      showToast('계산 결과를 히스토리에 저장했습니다.');
     }
+
+    function deleteHistoryItem(id) {
+      const index = historyData.findIndex((item) => item.id === id);
+      if (index < 0) return;
+      const [deleted] = historyData.splice(index, 1);
+      saveHistory();
+      renderHistory();
+      showToast('기록을 삭제했습니다.', {
+        actionLabel: '실행 취소',
+        onAction: () => {
+          historyData.splice(Math.min(index, historyData.length), 0, deleted);
+          saveHistory();
+          renderHistory();
+          showToast('삭제한 기록을 복원했습니다.');
+        }
+      });
+    }
+
+    function loadHistoryItem(id) {
+      const item = historyData.find((entry) => entry.id === id);
+      if (!item) return;
+
+      elements.date.value = item.date;
+      elements.mediaCost.value = formatInputCurrency(item.mediaCost);
+      elements.feeRate.value = item.feeRate;
+      elements.vatRate.value = item.vatRate;
+
+      const knownOption = Array.from(elements.channel.options).find((option) => option.value === item.channel);
+      if (item.channel === '-') {
+        elements.channel.value = '';
+        elements.customChannelField.hidden = true;
+        elements.customChannel.value = '';
+      } else if (knownOption) {
+        elements.channel.value = item.channel;
+        elements.customChannelField.hidden = true;
+        elements.customChannel.value = '';
+      } else {
+        elements.channel.value = '__custom__';
+        elements.customChannelField.hidden = false;
+        elements.customChannel.value = item.channel;
+      }
+
+      const selectedOption = elements.channel.options[elements.channel.selectedIndex];
+      if (selectedOption?.dataset.fee !== undefined) {
+        elements.presetStatus.textContent = `${selectedOption.value} 기록을 불러왔습니다. 저장된 요율을 유지합니다.`;
+        elements.presetStatus.classList.add('visible');
+      } else {
+        elements.presetStatus.classList.remove('visible');
+      }
+
+      clearAllErrors();
+      updateResult(item);
+      document.querySelector('.calculator-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      elements.mediaCost.focus({ preventScroll: true });
+      showToast('기록의 입력값을 계산기로 불러왔습니다.');
+    }
+
+    function clearHistory() {
+      if (!historyData.length) return;
+      const confirmed = window.confirm(`저장된 계산 기록 ${historyData.length}건을 모두 삭제하시겠습니까?`);
+      if (!confirmed) return;
+      historyData = [];
+      saveHistory();
+      renderHistory();
+      showToast('전체 기록을 삭제했습니다.');
+    }
+
+    function csvEscape(value) {
+      const text = String(value ?? '');
+      return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function exportCsv() {
+      if (!historyData.length) return;
+      const headers = [
+        '계산 날짜', '채널', '매체 비용', '대행 수수료율', '대행 수수료',
+        '수수료 차감 후 금액', '부가세율', '부가세', '실 지출 비용', '기록 시각'
+      ];
+      const rows = historyData.map((item) => [
+        item.date,
+        item.channel,
+        item.mediaCost,
+        item.feeRate,
+        item.agencyFee,
+        item.remaining,
+        item.vatRate,
+        item.vatAmount,
+        item.actualCost,
+        new Date(item.createdAt).toLocaleString('ko-KR')
+      ]);
+      const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(',')).join('\r\n');
+      const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `실지출비용_히스토리_${getLocalDateString().replace(/-/g, '')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showToast('CSV 파일을 생성했습니다.');
+    }
+
+    async function copyResult() {
+      if (!currentResult) return;
+      const text = [
+        `[실 지출 비용 계산 결과]`,
+        `날짜: ${currentResult.date}`,
+        `채널: ${currentResult.channel}`,
+        `매체 비용: ${formatCurrency(currentResult.mediaCost)}`,
+        `대행 수수료: ${formatCurrency(currentResult.agencyFee)} (${formatRate(currentResult.feeRate)})`,
+        `수수료 차감 후: ${formatCurrency(currentResult.remaining)}`,
+        `부가세: ${formatCurrency(currentResult.vatAmount)} (${formatRate(currentResult.vatRate)})`,
+        `실 지출 비용: ${formatCurrency(currentResult.actualCost)}`
+      ].join('\n');
+
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('계산 결과를 클립보드에 복사했습니다.');
+      } catch (_) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand('copy');
+        textarea.remove();
+        showToast(copied ? '계산 결과를 복사했습니다.' : '복사하지 못했습니다.');
+      }
+    }
+
+    function showToast(message, { actionLabel = '', onAction = null } = {}) {
+      window.clearTimeout(toastTimer);
+      elements.toastMessage.textContent = message;
+      elements.toastAction.hidden = !actionLabel;
+      elements.toastAction.textContent = actionLabel;
+      elements.toastAction.onclick = null;
+
+      if (actionLabel && typeof onAction === 'function') {
+        elements.toastAction.onclick = () => {
+          onAction();
+          elements.toast.classList.remove('visible');
+        };
+      }
+
+      elements.toast.classList.add('visible');
+      toastTimer = window.setTimeout(() => elements.toast.classList.remove('visible'), actionLabel ? 5000 : 2800);
+    }
+
+    function updateThemeButton() {
+      const isDark = document.documentElement.dataset.theme === 'dark';
+      elements.themeIcon.textContent = isDark ? '☀' : '☾';
+      elements.themeToggle.setAttribute('aria-label', isDark ? '라이트 모드로 전환' : '다크 모드로 전환');
+    }
+
+    function toggleTheme() {
+      const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = nextTheme;
+      try {
+        localStorage.setItem(THEME_KEY, nextTheme);
+      } catch (_) {}
+      updateThemeButton();
+    }
+
+    elements.form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const { values, errors, isValid } = getFormValues({ showErrors: true });
+      if (!isValid) {
+        const firstErrorName = Object.keys(errors)[0];
+        const firstErrorField = document.querySelector(`[data-field="${firstErrorName}"] input, [data-field="${firstErrorName}"] select`);
+        firstErrorField?.focus();
+        showToast('입력값을 확인해 주세요.');
+        return;
+      }
+      updateResult(values);
+      addHistory(values);
+    });
+
+    elements.channel.addEventListener('change', handlePresetChange);
+    elements.mediaCost.addEventListener('input', () => {
+      const previousLength = elements.mediaCost.value.length;
+      elements.mediaCost.value = formatInputCurrency(elements.mediaCost.value);
+      const nextLength = elements.mediaCost.value.length;
+      const position = elements.mediaCost.selectionStart ?? nextLength;
+      const nextPosition = Math.max(0, position + (nextLength - previousLength));
+      try {
+        elements.mediaCost.setSelectionRange(nextPosition, nextPosition);
+      } catch (_) {}
+      setFieldError('mediaCost');
+      updateLivePreview();
+    });
+    elements.mediaCost.addEventListener('blur', () => {
+      if (elements.mediaCost.value) elements.mediaCost.value = formatInputCurrency(elements.mediaCost.value);
+    });
+
+    [elements.date, elements.customChannel, elements.feeRate, elements.vatRate].forEach((input) => {
+      input.addEventListener('input', () => {
+        const fieldName = input.closest('[data-field]')?.dataset.field;
+        if (fieldName) setFieldError(fieldName);
+        updateLivePreview();
+      });
+      input.addEventListener('change', updateLivePreview);
+    });
+
+    elements.feeRate.addEventListener('input', () => {
+      if (elements.channel.options[elements.channel.selectedIndex]?.dataset.fee !== undefined) {
+        elements.presetStatus.textContent = '프리셋 요율을 직접 수정했습니다.';
+      }
+    });
+    elements.vatRate.addEventListener('input', () => {
+      if (elements.channel.options[elements.channel.selectedIndex]?.dataset.vat !== undefined) {
+        elements.presetStatus.textContent = '프리셋 요율을 직접 수정했습니다.';
+      }
+    });
+
+    elements.resetButton.addEventListener('click', () => resetForm());
+    elements.copyResultButton.addEventListener('click', copyResult);
+    elements.historySearch.addEventListener('input', renderHistory);
+    elements.historySort.addEventListener('change', renderHistory);
+    elements.exportButton.addEventListener('click', exportCsv);
+    elements.clearButton.addEventListener('click', clearHistory);
+    elements.themeToggle.addEventListener('click', toggleTheme);
+
+    elements.date.value = getLocalDateString();
+    updateThemeButton();
+    renderHistory();
   </script>
 </body>
 </html>
